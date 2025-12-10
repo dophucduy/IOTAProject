@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Carbon Credit Tracking System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            margin: 20px 0;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .network-info {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            padding: 10px 16px;
+            border-radius: 8px;
+            margin-top: 15px;
+            font-size: 0.9rem;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+            color: white;
+            text-align: center;
+            padding: 20px;
+            border-radius: 12px;
+        }
+
+        .stat-card h3 {
+            font-size: 2rem;
+            margin-bottom: 5px;
+        }
+
+        .stat-card p {
+            opacity: 0.9;
+            font-size: 0.9rem;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #555;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e1e5e9;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.2s ease;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+
+        .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%);
+        }
+
+        .alert {
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin: 16px 0;
+            font-weight: 500;
+            display: none;
+        }
+
+        .alert.show {
+            display: block;
+        }
+
+        .alert-success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .alert-error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .alert-info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            background-color: #d4edda;
+            color: #155724;
+        }
+
+        code {
+            background: #f8f9fa;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Monaco', 'Consolas', monospace;
+            font-size: 0.85em;
+            word-break: break-all;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🌱 Carbon Credit Tracking System</h1>
+            <p>Transparent, blockchain-based carbon credit management on IOTA</p>
+            <div class="network-info">
+                Connected to IOTA Testnet • Contract: 0xd06181cdb4...
+            </div>
+        </div>
+
+        <div id="alert" class="alert">
+            <span id="alert-message"></span>
+        </div>
+
+        <!-- Registry Statistics -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h3 id="total-issued">0</h3>
+                <p>Total Credits Issued</p>
+            </div>
+            <div class="stat-card">
+                <h3 id="total-retired">0</h3>
+                <p>Total Credits Retired</p>
+            </div>
+            <div class="stat-card">
+                <h3 id="available-credits">0</h3>
+                <p>Available Credits</p>
+            </div>
+        </div>
+
+        <!-- Issue Credits Form -->
+        <div class="card">
+            <h2>🏭 Issue New Carbon Credits</h2>
+            <form id="issue-form">
+                <div class="form-group">
+                    <label for="project-name">Project Name *</label>
+                    <input
+                        type="text"
+                        id="project-name"
+                        placeholder="e.g., Solar Farm Project Alpha"
+                        required
+                    />
+                </div>
+
+                <div class="form-group">
+                    <label for="amount">Amount (tons CO2 equivalent) *</label>
+                    <input
+                        type="number"
+                        id="amount"
+                        placeholder="e.g., 100"
+                        min="1"
+                        required
+                    />
+                </div>
+
+                <div class="form-group">
+                    <label for="vintage-year">Vintage Year</label>
+                    <input
+                        type="number"
+                        id="vintage-year"
+                        min="2000"
+                        max="2024"
+                        value="2024"
+                    />
+                </div>
+
+                <div class="form-group">
+                    <label for="methodology">Verification Methodology</label>
+                    <select id="methodology">
+                        <option value="VCS Standard">VCS Standard</option>
+                        <option value="Gold Standard">Gold Standard</option>
+                        <option value="REDD+">REDD+</option>
+                        <option value="CDM">Clean Development Mechanism</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+
+                <button type="submit" class="btn" id="issue-btn">
+                    🌿 Issue Credits
+                </button>
+            </form>
+        </div>
+
+        <!-- Actions -->
+        <div class="card">
+            <h2>📊 Registry Actions</h2>
+            <p>Manage your carbon credit registry and view detailed statistics.</p>
+            
+            <button class="btn btn-success" onclick="refreshStats()">
+                🔄 Refresh Stats
+            </button>
+            
+            <button class="btn" onclick="showTransferDemo()">
+                🔄 Transfer Credits
+            </button>
+            
+            <button class="btn btn-danger" onclick="showRetireDemo()">
+                🗑️ Retire Credits
+            </button>
+        </div>
+
+        <!-- Contract Information -->
+        <div class="card">
+            <h2>🔗 Contract Information</h2>
+            <div style="font-size: 0.9rem; color: #666;">
+                <p><strong>Package ID:</strong> <code>0xd06181cdb4a44c6336ad0a94cf8aa555d29552def7486f578758dda630d9efe4</code></p>
+                <p><strong>Registry ID:</strong> <code>0xae96e53ab4db4d1dfd14f7d7047a48065a7d970975eaf713ed925b57c7102054</code></p>
+                <p><strong>Network:</strong> IOTA Testnet</p>
+                <p><strong>Status:</strong> <span class="status-badge">Active</span></p>
+            </div>
+        </div>
+
+        <!-- Recent Transactions -->
+        <div class="card">
+            <h2>📋 Recent Activity</h2>
+            <div id="activity-log">
+                <p style="color: #666; font-style: italic;">No recent activity. Issue some credits to get started!</p>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="card" style="text-align: center; margin-top: 40px;">
+            <p style="color: #666; font-size: 0.9rem;">
+                🌍 Built with IOTA blockchain technology for transparent carbon credit tracking
+            </p>
+            <p style="color: #999; font-size: 0.8rem; margin-top: 10px;">
+                This is a demo interface. In production, you would connect a wallet for full functionality.
+            </p>
+        </div>
+    </div>
+
+    <script>
+        // Contract configuration
+        const CONTRACT_CONFIG = {
+            PACKAGE_ID: '0xd06181cdb4a44c6336ad0a94cf8aa555d29552def7486f578758dda630d9efe4',
+            REGISTRY_ID: '0xae96e53ab4db4d1dfd14f7d7047a48065a7d970975eaf713ed925b57c7102054',
+            MODULE_NAME: 'carbon_credits',
+            NETWORK: 'testnet'
+        };
+
+        // Demo data
+        let demoStats = {
+            totalIssued: 0,
+            totalRetired: 0
+        };
+
+        let activityLog = [];
+
+        // Utility functions
+        function showAlert(message, type = 'info') {
+            const alert = document.getElementById('alert');
+            const alertMessage = document.getElementById('alert-message');
+            
+            alert.className = `alert alert-${type} show`;
+            alertMessage.textContent = message;
+            
+            setTimeout(() => {
+                alert.classList.remove('show');
+            }, 5000);
+        }
+
+        function updateStats() {
+            document.getElementById('total-issued').textContent = demoStats.totalIssued;
+            document.getElementById('total-retired').textContent = demoStats.totalRetired;
+            document.getElementById('available-credits').textContent = demoStats.totalIssued - demoStats.totalRetired;
+        }
+
+        function addActivity(activity) {
+            activityLog.unshift(activity);
+            if (activityLog.length > 5) activityLog.pop();
+            
+            const activityDiv = document.getElementById('activity-log');
+            if (activityLog.length === 0) {
+                activityDiv.innerHTML = '<p style="color: #666; font-style: italic;">No recent activity. Issue some credits to get started!</p>';
+            } else {
+                activityDiv.innerHTML = activityLog.map(activity => 
+                    `<div style="padding: 10px; margin: 5px 0; background: #f8f9fa; border-radius: 6px; border-left: 4px solid #4CAF50;">
+                        <strong>${activity.type}</strong> - ${activity.description}
+                        <br><small style="color: #666;">${activity.timestamp}</small>
+                    </div>`
+                ).join('');
+            }
+        }
+
+        // Event handlers
+        document.getElementById('issue-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const projectName = document.getElementById('project-name').value;
+            const amount = parseInt(document.getElementById('amount').value);
+            const vintageYear = document.getElementById('vintage-year').value;
+            const methodology = document.getElementById('methodology').value;
+            
+            if (!projectName || !amount) {
+                showAlert('Please fill in all required fields', 'error');
+                return;
+            }
+            
+            // Simulate issuing credits
+            const btn = document.getElementById('issue-btn');
+            btn.disabled = true;
+            btn.textContent = 'Processing...';
+            
+            setTimeout(() => {
+                demoStats.totalIssued += amount;
+                updateStats();
+                
+                addActivity({
+                    type: 'Credits Issued',
+                    description: `${amount} credits issued for "${projectName}" (${vintageYear}, ${methodology})`,
+                    timestamp: new Date().toLocaleString()
+                });
+                
+                showAlert(`Successfully issued ${amount} carbon credits for "${projectName}"!`, 'success');
+                
+                // Reset form
+                document.getElementById('issue-form').reset();
+                document.getElementById('vintage-year').value = '2024';
+                
+                btn.disabled = false;
+                btn.textContent = '🌿 Issue Credits';
+            }, 2000);
+        });
+
+        function refreshStats() {
+            showAlert('In a real application, this would fetch live data from the IOTA blockchain', 'info');
+            updateStats();
+        }
+
+        function showTransferDemo() {
+            showAlert('Transfer functionality would allow moving credits between addresses. This requires wallet integration.', 'info');
+        }
+
+        function showRetireDemo() {
+            if (demoStats.totalIssued - demoStats.totalRetired > 0) {
+                const retireAmount = Math.min(10, demoStats.totalIssued - demoStats.totalRetired);
+                demoStats.totalRetired += retireAmount;
+                updateStats();
+                
+                addActivity({
+                    type: 'Credits Retired',
+                    description: `${retireAmount} credits permanently retired for carbon offsetting`,
+                    timestamp: new Date().toLocaleString()
+                });
+                
+                showAlert(`Successfully retired ${retireAmount} carbon credits!`, 'success');
+            } else {
+                showAlert('No available credits to retire. Issue some credits first!', 'error');
+            }
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            updateStats();
+            showAlert('Welcome to the Carbon Credit Tracking System! This is a demo interface connected to IOTA testnet.', 'info');
+        });
+    </script>
+</body>
+</html>
