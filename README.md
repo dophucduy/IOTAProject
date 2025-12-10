@@ -1,4 +1,4 @@
-<img width="995" height="926" alt="image" src="https://github.com/user-attachments/assets/f58ea85e-5680-4b13-b54d-c5b8e5d6aae6" />
+<img width="777" height="922" alt="image" src="https://github.com/user-attachments/assets/ce380f16-d7c7-4e5c-b45c-23347ddc5d05" />
 
 # Carbon Credit Tracking System
 
@@ -443,6 +443,10 @@ await signAndExecuteTransaction(retireTx);
 5. Start issuing and managing carbon credits on blockchain
 
 See `carbon-credits-dapp/WALLET_INTEGRATION.md` for detailed integration guide.
+
+## Contract address
+https://explorer.iota.org/object/0xd06181cdb4a44c6336ad0a94cf8aa555d29552def7486f578758dda630d9efe4?network=testnet 
+<img width="1452" height="879" alt="image" src="https://github.com/user-attachments/assets/1845afd9-ddb0-4dfb-ad89-c62eadfbbcb0" />
 
 ## Future Enhancements
 
