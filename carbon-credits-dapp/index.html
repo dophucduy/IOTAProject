@@ -611,15 +611,93 @@
                 return;
             }
             
-            // Simulate blockchain transaction
             const btn = document.getElementById('issue-btn');
             btn.disabled = true;
-            btn.textContent = 'Creating Transaction...';
             
-            showAlert('Signing transaction with wallet...', 'info');
-            
-            setTimeout(() => {
-                btn.textContent = 'Processing on Blockchain...';
+            // Check if using real wallet or demo wallet
+            if (window.iota && document.getElementById('wallet-name').textContent.includes('Real')) {
+                // Real IOTA Wallet transaction
+                btn.textContent = 'Creating Transaction...';
+                showAlert('Preparing blockchain transaction...', 'info');
+                
+                // Create transaction block for IOTA
+                const transactionBlock = {
+                    kind: 'ProgrammableTransaction',
+                    inputs: [
+                        { type: 'object', objectType: 'sharedObject', objectId: CONTRACT_CONFIG.REGISTRY_ID },
+                        { type: 'pure', valueType: 'string', value: projectName },
+                        { type: 'pure', valueType: 'u64', value: amount },
+                        { type: 'pure', valueType: 'u64', value: vintageYear },
+                        { type: 'pure', valueType: 'string', value: methodology }
+                    ],
+                    transactions: [{
+                        MoveCall: {
+                            package: CONTRACT_CONFIG.PACKAGE_ID,
+                            module: CONTRACT_CONFIG.MODULE_NAME,
+                            function: 'issue_credits',
+                            arguments: [0, 1, 2, 3, 4]
+                        }
+                    }]
+                };
+                
+                btn.textContent = 'Waiting for Wallet Approval...';
+                showAlert('🔐 Please approve the transaction in your IOTA Wallet popup', 'info');
+                
+                // Call real IOTA Wallet
+                window.iota.request({
+                    method: 'iota_signAndExecuteTransactionBlock',
+                    params: {
+                        transactionBlock: transactionBlock,
+                        account: walletAddress,
+                        requestType: 'WaitForLocalExecution',
+                        options: {
+                            showInput: true,
+                            showEffects: true,
+                            showEvents: true,
+                            showObjectChanges: true,
+                            showBalanceChanges: true,
+                        },
+                    },
+                }).then(result => {
+                    const txHash = result.digest;
+                    
+                    demoStats.totalIssued += amount;
+                    updateStats();
+                    
+                    addActivity({
+                        type: 'Credits Issued (Real)',
+                        description: `${amount} credits issued for "${projectName}" (${vintageYear}, ${methodology})`,
+                        timestamp: new Date().toLocaleString(),
+                        txHash: txHash
+                    });
+                    
+                    addTransaction({
+                        hash: txHash,
+                        type: 'Issue Credits',
+                        amount: amount,
+                        status: 'success',
+                        gasUsed: result.effects?.gasUsed?.computationCost || '1000000'
+                    });
+                    
+                    showAlert(`🎉 Successfully issued ${amount} carbon credits on IOTA blockchain!`, 'success');
+                    
+                    document.getElementById('issue-form').reset();
+                    document.getElementById('vintage-year').value = '2024';
+                    
+                    btn.disabled = false;
+                    btn.textContent = '🌿 Issue Credits';
+                }).catch(error => {
+                    console.error('Transaction failed:', error);
+                    showAlert(`Transaction failed: ${error.message}`, 'error');
+                    
+                    btn.disabled = false;
+                    btn.textContent = '🌿 Issue Credits';
+                });
+                
+            } else {
+                // Demo wallet - simulate transaction
+                btn.textContent = 'Simulating Transaction...';
+                showAlert('Simulating blockchain transaction (demo mode)...', 'info');
                 
                 setTimeout(() => {
                     const txHash = 'DEMO_' + Math.random().toString(36).substr(2, 9);
@@ -627,15 +705,13 @@
                     demoStats.totalIssued += amount;
                     updateStats();
                     
-                    // Add to activity log
                     addActivity({
-                        type: 'Credits Issued',
+                        type: 'Credits Issued (Demo)',
                         description: `${amount} credits issued for "${projectName}" (${vintageYear}, ${methodology})`,
                         timestamp: new Date().toLocaleString(),
                         txHash: txHash
                     });
                     
-                    // Add to transaction history
                     addTransaction({
                         hash: txHash,
                         type: 'Issue Credits',
@@ -644,16 +720,15 @@
                         gasUsed: Math.floor(Math.random() * 2000000) + 1000000
                     });
                     
-                    showAlert(`Successfully issued ${amount} carbon credits for "${projectName}" on IOTA blockchain!`, 'success');
+                    showAlert(`✅ Demo: Simulated issuing ${amount} carbon credits for "${projectName}"`, 'success');
                     
-                    // Reset form
                     document.getElementById('issue-form').reset();
                     document.getElementById('vintage-year').value = '2024';
                     
                     btn.disabled = false;
                     btn.textContent = '🌿 Issue Credits';
                 }, 2000);
-            }, 1000);
+            }
         });
 
         function refreshStats() {
@@ -696,22 +771,64 @@
 
         // Wallet functions
         function connectWallet() {
+            // Check if IOTA Wallet extension is available
+            if (window.iota) {
+                connectRealWallet();
+            } else {
+                connectDemoWallet();
+            }
+        }
+
+        function connectRealWallet() {
             const btn = document.getElementById('connect-wallet-btn');
             btn.disabled = true;
-            btn.textContent = 'Connecting...';
+            btn.textContent = 'Connecting to IOTA Wallet...';
             
-            // Simulate wallet connection
+            // Try to connect to real IOTA Wallet
+            window.iota.request({
+                method: 'iota_requestAccounts',
+            }).then(accounts => {
+                if (accounts && accounts.length > 0) {
+                    isWalletConnected = true;
+                    walletAddress = accounts[0];
+                    
+                    document.getElementById('connect-wallet-btn').style.display = 'none';
+                    document.getElementById('wallet-info').style.display = 'flex';
+                    document.getElementById('wallet-name').textContent = 'IOTA Wallet (Real)';
+                    document.getElementById('wallet-address').textContent = walletAddress.slice(0, 6) + '...' + walletAddress.slice(-4);
+                    document.getElementById('wallet-required-msg').style.display = 'none';
+                    
+                    updateIssueButton();
+                    showAlert('🎉 Real IOTA Wallet connected! Transactions will be signed by your wallet.', 'success');
+                } else {
+                    throw new Error('No accounts found');
+                }
+            }).catch(error => {
+                console.error('Real wallet connection failed:', error);
+                showAlert('Failed to connect IOTA Wallet. Using demo mode instead.', 'error');
+                connectDemoWallet();
+            });
+        }
+
+        function connectDemoWallet() {
+            const btn = document.getElementById('connect-wallet-btn');
+            btn.disabled = true;
+            btn.textContent = 'Connecting Demo Wallet...';
+            
+            // Simulate demo wallet connection
             setTimeout(() => {
                 isWalletConnected = true;
                 walletAddress = '0xa8906e25d6b479f7eae85f1fa8b634790722665176129ce2ed70f3662c3eddb6';
                 
                 document.getElementById('connect-wallet-btn').style.display = 'none';
                 document.getElementById('wallet-info').style.display = 'flex';
+                document.getElementById('wallet-name').textContent = 'Demo Wallet (Simulated)';
+                document.getElementById('wallet-address').textContent = walletAddress.slice(0, 6) + '...' + walletAddress.slice(-4);
                 document.getElementById('wallet-required-msg').style.display = 'none';
                 
                 updateIssueButton();
-                showAlert('Wallet connected successfully! You can now issue and manage carbon credits.', 'success');
-            }, 1500);
+                showAlert('Demo wallet connected! Transactions will be simulated (no real blockchain interaction).', 'info');
+            }, 1000);
         }
 
         function disconnectWallet() {

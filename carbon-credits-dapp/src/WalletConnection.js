@@ -117,26 +117,54 @@ const WalletConnection = () => {
                     onClick={() => handleConnect(walletOption.connect)}
                     disabled={isConnecting}
                   >
-                    <span className="wallet-icon">{walletOption.icon}</span>
-                    <span className="wallet-name">{walletOption.name}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1 }}>
+                      <span className="wallet-icon">{walletOption.icon}</span>
+                      <div style={{ textAlign: 'left', flex: 1 }}>
+                        <div className="wallet-name">{walletOption.name}</div>
+                        {walletOption.description && (
+                          <div style={{ fontSize: '0.8rem', color: '#666', marginTop: '2px' }}>
+                            {walletOption.description}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    {walletOption.name.includes('Real') && (
+                      <span className="wallet-badge" style={{ background: '#4CAF50' }}>Live</span>
+                    )}
                     {walletOption.name.includes('Demo') && (
-                      <span className="wallet-badge">Testnet</span>
+                      <span className="wallet-badge">Demo</span>
                     )}
                   </button>
                 ))}
               </div>
 
               <div className="wallet-info-text">
-                <h4>🔒 Wallet Security</h4>
-                <ul>
-                  <li>Your private keys never leave your wallet</li>
-                  <li>All transactions require your explicit approval</li>
-                  <li>Connected to IOTA Testnet for safe testing</li>
-                </ul>
+                <h4>🔒 Real vs Demo Wallet</h4>
+                <div style={{ background: '#e8f5e8', padding: '12px', borderRadius: '6px', marginBottom: '12px' }}>
+                  <strong>🔗 IOTA Wallet (Real):</strong>
+                  <ul style={{ margin: '8px 0', paddingLeft: '20px' }}>
+                    <li>Real blockchain transactions</li>
+                    <li>Wallet popup for transaction approval</li>
+                    <li>Actual gas fees required</li>
+                    <li>Permanent on-chain records</li>
+                  </ul>
+                </div>
+                
+                <div style={{ background: '#fff3cd', padding: '12px', borderRadius: '6px', marginBottom: '12px' }}>
+                  <strong>🧪 Demo Wallet (Simulated):</strong>
+                  <ul style={{ margin: '8px 0', paddingLeft: '20px' }}>
+                    <li>Simulated transactions only</li>
+                    <li>No wallet popup required</li>
+                    <li>No real gas fees</li>
+                    <li>For testing interface only</li>
+                  </ul>
+                </div>
 
-                <h4>📱 Don't have a wallet?</h4>
+                <h4>📱 Want Real Transactions?</h4>
                 <p>
-                  Install the <a href="https://chrome.google.com/webstore/detail/iota-wallet" target="_blank" rel="noopener noreferrer">IOTA Wallet browser extension</a> or use the demo wallet for testing.
+                  1. Install <a href="https://chrome.google.com/webstore/detail/iota-wallet" target="_blank" rel="noopener noreferrer">IOTA Wallet browser extension</a><br/>
+                  2. Get testnet tokens: <code>iota client faucet</code><br/>
+                  3. Connect "IOTA Wallet (Real Transactions)" above
                 </p>
               </div>
             </div>

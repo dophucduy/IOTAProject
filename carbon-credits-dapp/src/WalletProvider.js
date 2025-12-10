@@ -40,24 +40,27 @@ export const WalletProvider = ({ children }) => {
 
   // Check for available wallets
   const getAvailableWallets = () => {
+    const wallets = [];
+    
+    // Check for IOTA Wallet browser extension
     if (typeof window !== 'undefined' && window.iota) {
-      return [
-        {
-          name: 'IOTA Wallet',
-          icon: '🔗',
-          connect: connectIotaWallet
-        }
-      ];
+      wallets.push({
+        name: 'IOTA Wallet (Real Transactions)',
+        icon: '🔗',
+        connect: connectIotaWallet,
+        description: 'Connect your IOTA Wallet for real blockchain transactions'
+      });
     }
     
-    // Fallback for demo/development
-    return [
-      {
-        name: 'Demo Wallet (Testnet)',
-        icon: '🧪',
-        connect: connectDemoWallet
-      }
-    ];
+    // Always show demo wallet as fallback
+    wallets.push({
+      name: 'Demo Wallet (Simulated)',
+      icon: '🧪',
+      connect: connectDemoWallet,
+      description: 'Test the interface without real transactions'
+    });
+    
+    return wallets;
   };
 
   // Connect to IOTA Wallet (browser extension)
