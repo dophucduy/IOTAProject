@@ -10,9 +10,11 @@
   },
   "dependencies": {
     "@iota/iota-sdk": "^1.0.0",
+    "@iota/wallet-standard": "^1.0.0",
+    "@wallet-standard/core": "^1.0.0",
+    "@wallet-standard/features": "^1.0.0",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "web3": "^4.0.0"
+    "react-dom": "^18.2.0"
   },
   "devDependencies": {
     "@babel/core": "^7.22.0",

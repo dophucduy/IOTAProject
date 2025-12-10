@@ -39,9 +39,75 @@
         }
 
         .header {
-            text-align: center;
             color: white;
             margin-bottom: 30px;
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .header-text {
+            text-align: left;
+        }
+
+        .header-wallet {
+            flex-shrink: 0;
+        }
+
+        .wallet-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 8px 16px;
+            border-radius: 8px;
+            color: white;
+        }
+
+        .wallet-details {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .wallet-name {
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .wallet-address {
+            font-size: 0.8rem;
+            opacity: 0.8;
+            font-family: monospace;
+        }
+
+        .wallet-balance {
+            font-size: 0.8rem;
+            opacity: 0.9;
+            color: #4CAF50;
+        }
+
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 0.8rem;
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+        }
+
+        .btn-outline:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
         }
 
         .header h1 {
@@ -208,8 +274,25 @@
                 font-size: 2rem;
             }
             
+            .header-content {
+                flex-direction: column;
+                align-items: center;
+                text-align: center;
+                gap: 15px;
+            }
+            
+            .header-text {
+                text-align: center;
+            }
+            
             .stats-grid {
                 grid-template-columns: 1fr;
+            }
+            
+            .wallet-info {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 8px;
             }
         }
     </style>
@@ -217,10 +300,29 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>🌱 Carbon Credit Tracking System</h1>
-            <p>Transparent, blockchain-based carbon credit management on IOTA</p>
-            <div class="network-info">
-                Connected to IOTA Testnet • Contract: 0xd06181cdb4...
+            <div class="header-content">
+                <div class="header-text">
+                    <h1>🌱 Carbon Credit Tracking System</h1>
+                    <p>Transparent, blockchain-based carbon credit management on IOTA</p>
+                    <div class="network-info">
+                        Connected to IOTA Testnet • Contract: 0xd06181cdb4...
+                    </div>
+                </div>
+                <div class="header-wallet">
+                    <button id="connect-wallet-btn" class="btn btn-primary">
+                        🔗 Connect Wallet
+                    </button>
+                    <div id="wallet-info" class="wallet-info" style="display: none;">
+                        <div class="wallet-details">
+                            <span class="wallet-name" id="wallet-name">Demo Wallet</span>
+                            <span class="wallet-address" id="wallet-address">0xa890...ddb6</span>
+                            <span class="wallet-balance" id="wallet-balance">10.0000 IOTA</span>
+                        </div>
+                        <button class="btn btn-sm btn-outline" onclick="disconnectWallet()">
+                            🔌 Disconnect
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -294,6 +396,9 @@
                 <button type="submit" class="btn" id="issue-btn">
                     🌿 Issue Credits
                 </button>
+                <p id="wallet-required-msg" style="font-size: 0.9rem; color: #666; margin-top: 10px; display: none;">
+                    Connect your wallet to issue carbon credits on the blockchain
+                </p>
             </form>
         </div>
 
@@ -361,6 +466,8 @@
         };
 
         let activityLog = [];
+        let isWalletConnected = false;
+        let walletAddress = null;
 
         // Utility functions
         function showAlert(message, type = 'info') {
@@ -402,6 +509,11 @@
         document.getElementById('issue-form').addEventListener('submit', function(e) {
             e.preventDefault();
             
+            if (!isWalletConnected) {
+                showAlert('Please connect your wallet first', 'error');
+                return;
+            }
+            
             const projectName = document.getElementById('project-name').value;
             const amount = parseInt(document.getElementById('amount').value);
             const vintageYear = document.getElementById('vintage-year').value;
@@ -412,30 +524,36 @@
                 return;
             }
             
-            // Simulate issuing credits
+            // Simulate blockchain transaction
             const btn = document.getElementById('issue-btn');
             btn.disabled = true;
-            btn.textContent = 'Processing...';
+            btn.textContent = 'Creating Transaction...';
+            
+            showAlert('Signing transaction with wallet...', 'info');
             
             setTimeout(() => {
-                demoStats.totalIssued += amount;
-                updateStats();
+                btn.textContent = 'Processing on Blockchain...';
                 
-                addActivity({
-                    type: 'Credits Issued',
-                    description: `${amount} credits issued for "${projectName}" (${vintageYear}, ${methodology})`,
-                    timestamp: new Date().toLocaleString()
-                });
-                
-                showAlert(`Successfully issued ${amount} carbon credits for "${projectName}"!`, 'success');
-                
-                // Reset form
-                document.getElementById('issue-form').reset();
-                document.getElementById('vintage-year').value = '2024';
-                
-                btn.disabled = false;
-                btn.textContent = '🌿 Issue Credits';
-            }, 2000);
+                setTimeout(() => {
+                    demoStats.totalIssued += amount;
+                    updateStats();
+                    
+                    addActivity({
+                        type: 'Credits Issued',
+                        description: `${amount} credits issued for "${projectName}" (${vintageYear}, ${methodology})`,
+                        timestamp: new Date().toLocaleString()
+                    });
+                    
+                    showAlert(`Successfully issued ${amount} carbon credits for "${projectName}" on IOTA blockchain!`, 'success');
+                    
+                    // Reset form
+                    document.getElementById('issue-form').reset();
+                    document.getElementById('vintage-year').value = '2024';
+                    
+                    btn.disabled = false;
+                    btn.textContent = '🌿 Issue Credits';
+                }, 2000);
+            }, 1000);
         });
 
         function refreshStats() {
@@ -465,10 +583,63 @@
             }
         }
 
+        // Wallet functions
+        function connectWallet() {
+            const btn = document.getElementById('connect-wallet-btn');
+            btn.disabled = true;
+            btn.textContent = 'Connecting...';
+            
+            // Simulate wallet connection
+            setTimeout(() => {
+                isWalletConnected = true;
+                walletAddress = '0xa8906e25d6b479f7eae85f1fa8b634790722665176129ce2ed70f3662c3eddb6';
+                
+                document.getElementById('connect-wallet-btn').style.display = 'none';
+                document.getElementById('wallet-info').style.display = 'flex';
+                document.getElementById('wallet-required-msg').style.display = 'none';
+                
+                updateIssueButton();
+                showAlert('Wallet connected successfully! You can now issue and manage carbon credits.', 'success');
+            }, 1500);
+        }
+
+        function disconnectWallet() {
+            isWalletConnected = false;
+            walletAddress = null;
+            
+            document.getElementById('connect-wallet-btn').style.display = 'block';
+            document.getElementById('connect-wallet-btn').disabled = false;
+            document.getElementById('connect-wallet-btn').textContent = '🔗 Connect Wallet';
+            document.getElementById('wallet-info').style.display = 'none';
+            
+            updateIssueButton();
+            showAlert('Wallet disconnected', 'info');
+        }
+
+        function updateIssueButton() {
+            const btn = document.getElementById('issue-btn');
+            const msg = document.getElementById('wallet-required-msg');
+            
+            if (isWalletConnected) {
+                btn.disabled = false;
+                btn.textContent = '🌿 Issue Credits';
+                msg.style.display = 'none';
+            } else {
+                btn.disabled = true;
+                btn.textContent = '🔗 Connect Wallet First';
+                msg.style.display = 'block';
+            }
+        }
+
         // Initialize
         document.addEventListener('DOMContentLoaded', function() {
             updateStats();
-            showAlert('Welcome to the Carbon Credit Tracking System! This is a demo interface connected to IOTA testnet.', 'info');
+            updateIssueButton();
+            
+            // Add wallet connection event
+            document.getElementById('connect-wallet-btn').addEventListener('click', connectWallet);
+            
+            showAlert('Welcome to the Carbon Credit Tracking System! Connect your wallet to start managing carbon credits.', 'info');
         });
     </script>
 </body>

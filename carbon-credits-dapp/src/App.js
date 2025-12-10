@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { IotaClient, getFullnodeUrl } from '@iota/iota-sdk/client';
 import { TransactionBlock } from '@iota/iota-sdk/transactions';
+import { WalletProvider, useWallet } from './WalletProvider';
+import WalletConnection from './WalletConnection';
 
 // Contract configuration
 const CONTRACT_CONFIG = {
@@ -10,12 +12,23 @@ const CONTRACT_CONFIG = {
   NETWORK: 'testnet'
 };
 
-function App() {
-  const [client, setClient] = useState(null);
+function AppContent() {
+  const {
+    wallet,
+    account,
+    client,
+    isConnected,
+    signAndExecuteTransaction,
+    createIssueCreditsTransaction,
+    createRetireCreditsTransaction,
+    createTransferCreditsTransaction
+  } = useWallet();
+
   const [registryStats, setRegistryStats] = useState({ totalIssued: 0, totalRetired: 0 });
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [messageType, setMessageType] = useState('');
+  const [userCredits, setUserCredits] = useState([]);
   
   // Form states
   const [issueForm, setIssueForm] = useState({
@@ -25,32 +38,38 @@ function App() {
     methodology: 'VCS Standard'
   });
 
-  // Initialize IOTA client
+  const [transferForm, setTransferForm] = useState({
+    creditId: '',
+    recipient: ''
+  });
+
+  const [retireForm, setRetireForm] = useState({
+    creditId: '',
+    reason: ''
+  });
+
+  // Fetch data when client is available
   useEffect(() => {
-    const initClient = async () => {
-      try {
-        const iotaClient = new IotaClient({
-          url: getFullnodeUrl('testnet')
-        });
-        setClient(iotaClient);
-        await fetchRegistryStats(iotaClient);
-      } catch (error) {
-        console.error('Failed to initialize client:', error);
-        showMessage('Failed to connect to IOTA network', 'error');
-      }
-    };
+    if (client) {
+      fetchRegistryStats();
+    }
+  }, [client]);
 
-    initClient();
-  }, []);
+  // Fetch user credits when wallet connects
+  useEffect(() => {
+    if (isConnected && client) {
+      fetchUserCredits();
+    }
+  }, [isConnected, client]);
 
-  const fetchRegistryStats = async (iotaClient = client) => {
-    if (!iotaClient) return;
+  const fetchRegistryStats = async () => {
+    if (!client) return;
     
     try {
       setLoading(true);
       
       // Call the get_registry_stats function
-      const result = await iotaClient.devInspectTransactionBlock({
+      const result = await client.devInspectTransactionBlock({
         transactionBlock: (() => {
           const tx = new TransactionBlock();
           tx.moveCall({
@@ -59,7 +78,7 @@ function App() {
           });
           return tx;
         })(),
-        sender: '0x0000000000000000000000000000000000000000000000000000000000000000'
+        sender: account || '0x0000000000000000000000000000000000000000000000000000000000000000'
       });
 
       if (result.results && result.results[0] && result.results[0].returnValues) {
@@ -74,6 +93,33 @@ function App() {
       showMessage('Failed to fetch registry statistics', 'error');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchUserCredits = async () => {
+    if (!client || !account) return;
+
+    try {
+      // Get objects owned by the user
+      const objects = await client.getOwnedObjects({
+        owner: account,
+        filter: {
+          StructType: `${CONTRACT_CONFIG.PACKAGE_ID}::${CONTRACT_CONFIG.MODULE_NAME}::CarbonCredit`
+        },
+        options: {
+          showContent: true,
+          showType: true
+        }
+      });
+
+      const credits = objects.data.map(obj => ({
+        id: obj.data.objectId,
+        ...obj.data.content.fields
+      }));
+
+      setUserCredits(credits);
+    } catch (error) {
+      console.error('Failed to fetch user credits:', error);
     }
   };
 
@@ -97,8 +143,8 @@ function App() {
   const handleIssueCredits = async (e) => {
     e.preventDefault();
     
-    if (!client) {
-      showMessage('Client not initialized', 'error');
+    if (!isConnected) {
+      showMessage('Please connect your wallet first', 'error');
       return;
     }
 
@@ -109,24 +155,126 @@ function App() {
 
     try {
       setLoading(true);
-      showMessage('This is a demo interface. In a real application, you would connect a wallet to sign transactions.', 'info');
+      showMessage('Creating transaction...', 'info');
+
+      // Create transaction block
+      const tx = createIssueCreditsTransaction(
+        CONTRACT_CONFIG.REGISTRY_ID,
+        issueForm.projectName,
+        parseInt(issueForm.amount),
+        parseInt(issueForm.vintageYear),
+        issueForm.methodology
+      );
+
+      // Sign and execute transaction
+      const result = await signAndExecuteTransaction(tx);
       
-      // Simulate successful transaction
-      setTimeout(() => {
+      if (result.effects?.status?.status === 'success' || result.digest) {
         showMessage(`Successfully issued ${issueForm.amount} carbon credits for "${issueForm.projectName}"!`, 'success');
+        
+        // Reset form
         setIssueForm({
           projectName: '',
           amount: '',
           vintageYear: new Date().getFullYear(),
           methodology: 'VCS Standard'
         });
-        // In a real app, you would refresh the stats here
-        setLoading(false);
-      }, 2000);
+
+        // Refresh data
+        await fetchRegistryStats();
+        await fetchUserCredits();
+      } else {
+        throw new Error('Transaction failed');
+      }
       
     } catch (error) {
       console.error('Failed to issue credits:', error);
-      showMessage('Failed to issue carbon credits', 'error');
+      showMessage(`Failed to issue carbon credits: ${error.message}`, 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleTransferCredits = async (e) => {
+    e.preventDefault();
+    
+    if (!isConnected) {
+      showMessage('Please connect your wallet first', 'error');
+      return;
+    }
+
+    if (!transferForm.creditId || !transferForm.recipient) {
+      showMessage('Please fill in all required fields', 'error');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      showMessage('Creating transfer transaction...', 'info');
+
+      const tx = createTransferCreditsTransaction(
+        transferForm.creditId,
+        transferForm.recipient
+      );
+
+      const result = await signAndExecuteTransaction(tx);
+      
+      if (result.effects?.status?.status === 'success' || result.digest) {
+        showMessage('Successfully transferred carbon credits!', 'success');
+        
+        setTransferForm({ creditId: '', recipient: '' });
+        await fetchUserCredits();
+      } else {
+        throw new Error('Transfer failed');
+      }
+      
+    } catch (error) {
+      console.error('Failed to transfer credits:', error);
+      showMessage(`Failed to transfer credits: ${error.message}`, 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRetireCredits = async (e) => {
+    e.preventDefault();
+    
+    if (!isConnected) {
+      showMessage('Please connect your wallet first', 'error');
+      return;
+    }
+
+    if (!retireForm.creditId || !retireForm.reason) {
+      showMessage('Please fill in all required fields', 'error');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      showMessage('Creating retirement transaction...', 'info');
+
+      const tx = createRetireCreditsTransaction(
+        CONTRACT_CONFIG.REGISTRY_ID,
+        retireForm.creditId,
+        retireForm.reason
+      );
+
+      const result = await signAndExecuteTransaction(tx);
+      
+      if (result.effects?.status?.status === 'success' || result.digest) {
+        showMessage('Successfully retired carbon credits!', 'success');
+        
+        setRetireForm({ creditId: '', reason: '' });
+        await fetchRegistryStats();
+        await fetchUserCredits();
+      } else {
+        throw new Error('Retirement failed');
+      }
+      
+    } catch (error) {
+      console.error('Failed to retire credits:', error);
+      showMessage(`Failed to retire credits: ${error.message}`, 'error');
+    } finally {
       setLoading(false);
     }
   };
@@ -136,10 +284,17 @@ function App() {
   return (
     <div className="container">
       <div className="header">
-        <h1>🌱 Carbon Credit Tracking System</h1>
-        <p>Transparent, blockchain-based carbon credit management on IOTA</p>
-        <div className="network-info">
-          Connected to IOTA Testnet • Contract: {CONTRACT_CONFIG.PACKAGE_ID.slice(0, 10)}...
+        <div className="header-content">
+          <div className="header-text">
+            <h1>🌱 Carbon Credit Tracking System</h1>
+            <p>Transparent, blockchain-based carbon credit management on IOTA</p>
+            <div className="network-info">
+              Connected to IOTA Testnet • Contract: {CONTRACT_CONFIG.PACKAGE_ID.slice(0, 10)}...
+            </div>
+          </div>
+          <div className="header-wallet">
+            <WalletConnection />
+          </div>
         </div>
       </div>
 
@@ -225,11 +380,127 @@ function App() {
             </select>
           </div>
 
-          <button type="submit" className="btn" disabled={loading}>
-            {loading ? 'Processing...' : '🌿 Issue Credits'}
+          <button type="submit" className="btn" disabled={loading || !isConnected}>
+            {loading ? 'Processing...' : !isConnected ? '🔗 Connect Wallet First' : '🌿 Issue Credits'}
           </button>
+          {!isConnected && (
+            <p style={{ fontSize: '0.9rem', color: '#666', marginTop: '10px' }}>
+              Connect your wallet to issue carbon credits on the blockchain
+            </p>
+          )}
         </form>
       </div>
+
+      {/* User Credits */}
+      {isConnected && (
+        <div className="card">
+          <h2>💳 Your Carbon Credits</h2>
+          {userCredits.length > 0 ? (
+            <div className="credit-list"></div>
+              {userCredits.map((credit) => (
+                <div key={credit.id} className="credit-item">
+                  <h4>{credit.project_name}</h4>
+                  <p><strong>Amount:</strong> {credit.amount} tons CO2</p>
+                  <p><strong>Vintage Year:</strong> {credit.vintage_year}</p>
+                  <p><strong>Methodology:</strong> {credit.methodology}</p>
+                  <p><strong>Status:</strong> 
+                    <span className={`status-badge ${credit.is_retired ? 'status-retired' : 'status-active'}`}>
+                      {credit.is_retired ? 'Retired' : 'Active'}
+                    </span>
+                  </p>
+                  <p><strong>Credit ID:</strong> <code>{credit.id.slice(0, 20)}...</code></p>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p style={{ color: '#666', fontStyle: 'italic' }}>
+              No carbon credits found. Issue some credits to get started!
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* Transfer Credits */}
+      {isConnected && userCredits.length > 0 && (
+        <div className="card">
+          <h2>🔄 Transfer Credits</h2>
+          <form onSubmit={handleTransferCredits}>
+            <div className="form-group">
+              <label htmlFor="transfer-credit">Select Credit to Transfer</label>
+              <select
+                id="transfer-credit"
+                value={transferForm.creditId}
+                onChange={(e) => setTransferForm(prev => ({ ...prev, creditId: e.target.value }))}
+                required
+              >
+                <option value="">Choose a credit...</option>
+                {userCredits.filter(credit => !credit.is_retired).map((credit) => (
+                  <option key={credit.id} value={credit.id}>
+                    {credit.project_name} - {credit.amount} tons
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="recipient">Recipient Address</label>
+              <input
+                type="text"
+                id="recipient"
+                value={transferForm.recipient}
+                onChange={(e) => setTransferForm(prev => ({ ...prev, recipient: e.target.value }))}
+                placeholder="0x..."
+                required
+              />
+            </div>
+
+            <button type="submit" className="btn" disabled={loading}>
+              {loading ? 'Processing...' : '🔄 Transfer Credits'}
+            </button>
+          </form>
+        </div>
+      )}
+
+      {/* Retire Credits */}
+      {isConnected && userCredits.length > 0 && (
+        <div className="card">
+          <h2>🗑️ Retire Credits</h2>
+          <form onSubmit={handleRetireCredits}>
+            <div className="form-group">
+              <label htmlFor="retire-credit">Select Credit to Retire</label>
+              <select
+                id="retire-credit"
+                value={retireForm.creditId}
+                onChange={(e) => setRetireForm(prev => ({ ...prev, creditId: e.target.value }))}
+                required
+              >
+                <option value="">Choose a credit...</option>
+                {userCredits.filter(credit => !credit.is_retired).map((credit) => (
+                  <option key={credit.id} value={credit.id}>
+                    {credit.project_name} - {credit.amount} tons
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="retirement-reason">Retirement Reason</label>
+              <input
+                type="text"
+                id="retirement-reason"
+                value={retireForm.reason}
+                onChange={(e) => setRetireForm(prev => ({ ...prev, reason: e.target.value }))}
+                placeholder="e.g., Corporate Net Zero Commitment"
+                required
+              />
+            </div>
+
+            <button type="submit" className="btn btn-danger" disabled={loading}>
+              {loading ? 'Processing...' : '🗑️ Retire Credits'}
+            </button>
+          </form>
+        </div>
+      )}
 
       {/* Actions */}
       <div className="card">
@@ -242,20 +513,6 @@ function App() {
           disabled={loading}
         >
           🔄 Refresh Stats
-        </button>
-        
-        <button 
-          className="btn" 
-          onClick={() => showMessage('Transfer functionality would allow moving credits between addresses', 'info')}
-        >
-          🔄 Transfer Credits
-        </button>
-        
-        <button 
-          className="btn btn-danger" 
-          onClick={() => showMessage('Retirement functionality would permanently remove credits from circulation', 'info')}
-        >
-          🗑️ Retire Credits
         </button>
       </div>
 
@@ -280,6 +537,16 @@ function App() {
         </p>
       </div>
     </div>
+  );
+}
+
+}
+
+function App() {
+  return (
+    <WalletProvider>
+      <AppContent />
+    </WalletProvider>
   );
 }
 
