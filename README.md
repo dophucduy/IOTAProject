@@ -1,3 +1,5 @@
+<img width="995" height="926" alt="image" src="https://github.com/user-attachments/assets/f58ea85e-5680-4b13-b54d-c5b8e5d6aae6" />
+
 # Carbon Credit Tracking System
 
 A comprehensive blockchain-based carbon credit tracking system built with Move on the IOTA network, featuring both smart contract backend and React frontend interface.
