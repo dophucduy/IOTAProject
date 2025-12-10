@@ -29,6 +29,7 @@ function AppContent() {
   const [message, setMessage] = useState('');
   const [messageType, setMessageType] = useState('');
   const [userCredits, setUserCredits] = useState([]);
+  const [transactionHistory, setTransactionHistory] = useState([]);
   
   // Form states
   const [issueForm, setIssueForm] = useState({
@@ -171,6 +172,20 @@ function AppContent() {
       
       if (result.effects?.status?.status === 'success' || result.digest) {
         showMessage(`Successfully issued ${issueForm.amount} carbon credits for "${issueForm.projectName}"!`, 'success');
+        
+        // Add to transaction history
+        const newTransaction = {
+          hash: result.digest,
+          type: 'Issue Credits',
+          amount: issueForm.amount,
+          projectName: issueForm.projectName,
+          timestamp: new Date().toISOString(),
+          status: 'success',
+          gasUsed: result.effects?.gasUsed?.computationCost || '1000000',
+          explorerUrl: `https://explorer.iota.cafe/testnet/txblock/${result.digest}`
+        };
+        
+        setTransactionHistory(prev => [newTransaction, ...prev.slice(0, 9)]);
         
         // Reset form
         setIssueForm({
@@ -514,6 +529,67 @@ function AppContent() {
         >
           🔄 Refresh Stats
         </button>
+      </div>
+
+      {/* Transaction History */}
+      {isConnected && transactionHistory.length > 0 && (
+        <div className="card">
+          <h2>🔗 Transaction History</h2>
+          <p style={{ marginBottom: '20px', color: '#666' }}>Your blockchain transactions with links to IOTA Explorer</p>
+          <div className="transaction-list">
+            {transactionHistory.map((tx, index) => (
+              <div key={index} className="transaction-item">
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                  <strong style={{ color: '#495057' }}>{tx.type}</strong>
+                  <span className={`status-badge ${tx.status === 'success' ? 'status-active' : 'status-retired'}`}>
+                    {tx.status}
+                  </span>
+                </div>
+                <div style={{ fontSize: '0.9rem', color: '#666', marginBottom: '8px' }}>
+                  {tx.projectName && <span><strong>Project:</strong> {tx.projectName} • </span>}
+                  <strong>Amount:</strong> {tx.amount} tons CO2 • 
+                  <strong>Gas:</strong> {parseInt(tx.gasUsed).toLocaleString()} NANOS
+                </div>
+                <div style={{ fontSize: '0.8rem', color: '#999', marginBottom: '8px' }}>
+                  {new Date(tx.timestamp).toLocaleString()}
+                </div>
+                <div style={{ fontSize: '0.8rem' }}>
+                  <strong>TX Hash:</strong> <code style={{ background: '#e9ecef', padding: '2px 4px', borderRadius: '3px', fontSize: '0.7rem' }}>{tx.hash}</code>
+                  <br />
+                  <a href={tx.explorerUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#667eea', textDecoration: 'none' }}>
+                    🔗 View on IOTA Explorer
+                  </a>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Blockchain Explorer Links */}
+      <div className="card">
+        <h2>🌐 Blockchain Explorer</h2>
+        <p style={{ marginBottom: '15px', color: '#666' }}>View your contract and registry on IOTA Explorer:</p>
+        <div style={{ display: 'flex', gap: '15px', flexWrap: 'wrap' }}>
+          <a 
+            href={`https://explorer.iota.cafe/testnet/object/${CONTRACT_CONFIG.PACKAGE_ID}`}
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="btn btn-outline" 
+            style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '8px' }}
+          >
+            📦 View Contract
+          </a>
+          <a 
+            href={`https://explorer.iota.cafe/testnet/object/${CONTRACT_CONFIG.REGISTRY_ID}`}
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="btn btn-outline" 
+            style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '8px' }}
+          >
+            🏛️ View Registry
+          </a>
+        </div>
       </div>
 
       {/* Contract Information */}

@@ -110,6 +110,17 @@
             background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
         }
 
+        .btn-outline {
+            background: transparent;
+            border: 2px solid #667eea;
+            color: #667eea;
+        }
+
+        .btn-outline:hover {
+            background: #667eea;
+            color: white;
+        }
+
         .header h1 {
             font-size: 2.5rem;
             margin-bottom: 10px;
@@ -431,11 +442,40 @@
             </div>
         </div>
 
-        <!-- Recent Transactions -->
+        <!-- Recent Activity -->
         <div class="card">
             <h2>📋 Recent Activity</h2>
             <div id="activity-log">
                 <p style="color: #666; font-style: italic;">No recent activity. Issue some credits to get started!</p>
+            </div>
+        </div>
+
+        <!-- Transaction History -->
+        <div class="card">
+            <h2>🔗 Transaction History</h2>
+            <p style="margin-bottom: 20px; color: #666;">All blockchain transactions with links to IOTA Explorer</p>
+            <div id="transaction-history">
+                <p style="color: #666; font-style: italic;">No transactions yet. Connect your wallet and issue credits to see transaction history.</p>
+            </div>
+        </div>
+
+        <!-- Blockchain Explorer Links -->
+        <div class="card">
+            <h2>🌐 Blockchain Explorer</h2>
+            <p style="margin-bottom: 15px; color: #666;">View your contract and registry on IOTA Explorer:</p>
+            <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+                <a href="https://explorer.iota.cafe/testnet/object/0xd06181cdb4a44c6336ad0a94cf8aa555d29552def7486f578758dda630d9efe4" 
+                   target="_blank" 
+                   class="btn btn-outline" 
+                   style="text-decoration: none; display: inline-flex; align-items: center; gap: 8px;">
+                    📦 View Contract
+                </a>
+                <a href="https://explorer.iota.cafe/testnet/object/0xae96e53ab4db4d1dfd14f7d7047a48065a7d970975eaf713ed925b57c7102054" 
+                   target="_blank" 
+                   class="btn btn-outline" 
+                   style="text-decoration: none; display: inline-flex; align-items: center; gap: 8px;">
+                    🏛️ View Registry
+                </a>
             </div>
         </div>
 
@@ -468,6 +508,7 @@
         let activityLog = [];
         let isWalletConnected = false;
         let walletAddress = null;
+        let transactionHistory = [];
 
         // Utility functions
         function showAlert(message, type = 'info') {
@@ -500,6 +541,52 @@
                     `<div style="padding: 10px; margin: 5px 0; background: #f8f9fa; border-radius: 6px; border-left: 4px solid #4CAF50;">
                         <strong>${activity.type}</strong> - ${activity.description}
                         <br><small style="color: #666;">${activity.timestamp}</small>
+                        ${activity.txHash ? `<br><a href="https://explorer.iota.cafe/testnet/txblock/${activity.txHash}" target="_blank" style="color: #667eea; font-size: 0.8rem;">🔗 View on IOTA Explorer</a>` : ''}
+                    </div>`
+                ).join('');
+            }
+        }
+
+        function addTransaction(txData) {
+            const transaction = {
+                hash: txData.hash || 'DEMO_' + Math.random().toString(36).substr(2, 9),
+                type: txData.type,
+                amount: txData.amount,
+                timestamp: new Date().toISOString(),
+                status: txData.status || 'success',
+                gasUsed: txData.gasUsed || '1000000',
+                explorerUrl: `https://explorer.iota.cafe/testnet/txblock/${txData.hash}`
+            };
+            
+            transactionHistory.unshift(transaction);
+            if (transactionHistory.length > 10) transactionHistory.pop();
+            
+            updateTransactionHistory();
+        }
+
+        function updateTransactionHistory() {
+            const historyDiv = document.getElementById('transaction-history');
+            if (!historyDiv) return;
+            
+            if (transactionHistory.length === 0) {
+                historyDiv.innerHTML = '<p style="color: #666; font-style: italic;">No transactions yet. Connect your wallet and issue credits to see transaction history.</p>';
+            } else {
+                historyDiv.innerHTML = transactionHistory.map(tx => 
+                    `<div style="padding: 12px; margin: 8px 0; background: #f8f9fa; border-radius: 8px; border: 1px solid #e9ecef;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                            <strong style="color: #495057;">${tx.type}</strong>
+                            <span style="background: ${tx.status === 'success' ? '#d4edda' : '#f8d7da'}; color: ${tx.status === 'success' ? '#155724' : '#721c24'}; padding: 2px 8px; border-radius: 12px; font-size: 0.7rem; font-weight: 600; text-transform: uppercase;">${tx.status}</span>
+                        </div>
+                        <div style="font-size: 0.9rem; color: #666; margin-bottom: 8px;">
+                            Amount: <strong>${tx.amount} tons CO2</strong> • Gas: ${parseInt(tx.gasUsed).toLocaleString()} NANOS
+                        </div>
+                        <div style="font-size: 0.8rem; color: #999; margin-bottom: 8px;">
+                            ${new Date(tx.timestamp).toLocaleString()}
+                        </div>
+                        <div style="font-size: 0.8rem;">
+                            <strong>TX Hash:</strong> <code style="background: #e9ecef; padding: 2px 4px; border-radius: 3px; font-size: 0.7rem;">${tx.hash}</code>
+                            <br><a href="${tx.explorerUrl}" target="_blank" style="color: #667eea; text-decoration: none;">🔗 View on IOTA Explorer</a>
+                        </div>
                     </div>`
                 ).join('');
             }
@@ -535,13 +622,26 @@
                 btn.textContent = 'Processing on Blockchain...';
                 
                 setTimeout(() => {
+                    const txHash = 'DEMO_' + Math.random().toString(36).substr(2, 9);
+                    
                     demoStats.totalIssued += amount;
                     updateStats();
                     
+                    // Add to activity log
                     addActivity({
                         type: 'Credits Issued',
                         description: `${amount} credits issued for "${projectName}" (${vintageYear}, ${methodology})`,
-                        timestamp: new Date().toLocaleString()
+                        timestamp: new Date().toLocaleString(),
+                        txHash: txHash
+                    });
+                    
+                    // Add to transaction history
+                    addTransaction({
+                        hash: txHash,
+                        type: 'Issue Credits',
+                        amount: amount,
+                        status: 'success',
+                        gasUsed: Math.floor(Math.random() * 2000000) + 1000000
                     });
                     
                     showAlert(`Successfully issued ${amount} carbon credits for "${projectName}" on IOTA blockchain!`, 'success');
@@ -568,13 +668,24 @@
         function showRetireDemo() {
             if (demoStats.totalIssued - demoStats.totalRetired > 0) {
                 const retireAmount = Math.min(10, demoStats.totalIssued - demoStats.totalRetired);
+                const txHash = 'DEMO_' + Math.random().toString(36).substr(2, 9);
+                
                 demoStats.totalRetired += retireAmount;
                 updateStats();
                 
                 addActivity({
                     type: 'Credits Retired',
                     description: `${retireAmount} credits permanently retired for carbon offsetting`,
-                    timestamp: new Date().toLocaleString()
+                    timestamp: new Date().toLocaleString(),
+                    txHash: txHash
+                });
+                
+                addTransaction({
+                    hash: txHash,
+                    type: 'Retire Credits',
+                    amount: retireAmount,
+                    status: 'success',
+                    gasUsed: Math.floor(Math.random() * 1500000) + 800000
                 });
                 
                 showAlert(`Successfully retired ${retireAmount} carbon credits!`, 'success');

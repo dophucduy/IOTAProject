@@ -220,6 +220,35 @@ body {
   color: #721c24;
 }
 
+.transaction-list {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.transaction-item {
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 16px;
+  margin: 10px 0;
+  transition: background-color 0.2s ease;
+}
+
+.transaction-item:hover {
+  background: #e9ecef;
+}
+
+.btn-outline {
+  background: transparent;
+  border: 2px solid #667eea;
+  color: #667eea;
+}
+
+.btn-outline:hover {
+  background: #667eea;
+  color: white;
+}
+
 .loading {
   text-align: center;
   padding: 40px;
